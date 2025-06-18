@@ -4,9 +4,9 @@ Persistent
 
 SetTimer CheckApp, 5000  ; Check every 5 seconds
 
-appName := "AppToRun.exe"
-appPath := "C:\Users\ProjectAddressDirectory\AppToRun.exe"
-appDir := A_PathSplit(appPath).Dir
+appName := "MyProjectApp.exe"
+appDir := "C:\Users\DirectoryToProjectFolder\BuiltApps"
+appPath := appDir . "\" . appName
 logFile := appDir . "\AppMonitorLog.txt"
 
 CheckApp() {
