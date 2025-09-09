@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 using TMPro;
 
 public class CountdownTimer : MonoBehaviour
@@ -6,21 +7,32 @@ public class CountdownTimer : MonoBehaviour
     [Header("Timer Settings")]
     [SerializeField] private float duration = 60f;
     [SerializeField] private bool autoStart = true;
+    [SerializeField] private bool useMinutesFormat = true; // true for mm:ss, false for ss
+    
+    [Header("Events")]
+    [SerializeField] private UnityEvent onTimerComplete = new UnityEvent();
     
     [Header("References")]
     [SerializeField] private Material timerMaterial;
-    [SerializeField] private TextMeshProUGUI timeText;  // Changed to TextMeshProUGUI
+    [SerializeField] private TextMeshProUGUI[] timeText;  // Array of text components
     
     private float currentTime;
     private bool isRunning;
     
-    // Property to expose remaining time
+    // Properties to expose values
     public float RemainingTime => currentTime;
-    
-    // Property to check if timer is active
     public bool IsRunning => isRunning;
+    public float Duration => duration;
 
     private void Start()
+    {
+        if (autoStart)
+        {
+            ResetTimer();
+        }
+    }
+
+    private void OnEnable()
     {
         if (autoStart)
         {
@@ -55,10 +67,32 @@ public class CountdownTimer : MonoBehaviour
             timerMaterial.SetFloat("_Percentage", normalizedTime);
         }
         
-        // Update text display
-        if (timeText != null)
+        // Update text displays
+        if (timeText != null && timeText.Length > 0)
         {
-            timeText.text = $"{Mathf.Ceil(currentTime):0}";
+            string timeString;
+            
+            if (useMinutesFormat)
+            {
+                // mm:ss format
+                int totalSeconds = Mathf.CeilToInt(currentTime);
+                int minutes = totalSeconds / 60;
+                int seconds = totalSeconds % 60;
+                timeString = $"{minutes:00}:{seconds:00}";
+            }
+            else
+            {
+                // ss format
+                timeString = $"{Mathf.CeilToInt(currentTime)}";
+            }
+            
+            for (int i = 0; i < timeText.Length; i++)
+            {
+                if (timeText[i] != null)
+                {
+                    timeText[i].text = timeString;
+                }
+            }
         }
     }
     
@@ -90,7 +124,8 @@ public class CountdownTimer : MonoBehaviour
     
     private void OnTimerComplete()
     {
-        // Add any completion logic here
+        // Invoke the UnityEvent to trigger attached functions
+        onTimerComplete?.Invoke();
         Debug.Log("Timer Complete!");
     }
 }
