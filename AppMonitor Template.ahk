@@ -2,29 +2,71 @@
 ;#NoTrayIcon
 Persistent
 
-SetTimer CheckApp, 5000  ; Check every 5 seconds
+; ============================
+; CONFIGURATION
+; ============================
 
-appName := "MyProjectApp.exe"
-appDir := "C:\Users\DirectoryToProjectFolder\BuiltApps"
-appPath := appDir . "\" . appName
-logFile := appDir . "\AppMonitorLog.txt"
+appName := "MyProject.exe"
+appDir  := "C:\Users\Your\Project\Directory"
+
+config := {
+    appName: appName,
+    appDir: appDir,
+    appPath: appDir . "\" . appName,
+    logFile: appDir . "\AppMonitorLog.txt",
+
+    checkInterval: 5000,
+    focusInterval: 30000,
+    forceAlwaysOnTop: true
+}
+
+; ============================
+; TIMERS
+; ============================
+
+SetTimer CheckApp, config.checkInterval
+SetTimer EnsureFocus, config.focusInterval
+
+; ============================
+; FUNCTIONS
+; ============================
 
 CheckApp() {
-    global appName, appPath, logFile
-    if !ProcessExist(appName) {
-        Run appPath
-        timestamp := FormatTime(A_Now, "yyyy-MM-dd_HH:mm:ss")
-        FileAppend "[" timestamp "] Restarted application: " appName "`n", logFile
+    global config
+
+    if !ProcessExists(config.appName) {
+        Run config.appPath
+
+        Log("Restarted application: " config.appName)
     }
 }
 
-ProcessExist(name) {
-    return ProcessExistPID := ProcessExistRaw(name)
+EnsureFocus() {
+    global config
+
+    hwnd := WinExist("ahk_exe " config.appName)
+    if !hwnd
+        return
+
+    ; Restore if minimized
+    if WinGetMinMax("ahk_id " hwnd) = -1
+        WinRestore "ahk_id " hwnd
+
+    if config.forceAlwaysOnTop {
+        WinSetAlwaysOnTop true, "ahk_id " hwnd
+    } else {
+        ; Temporary topmost bump (safer default)
+        WinSetAlwaysOnTop true, "ahk_id " hwnd
+        WinActivate "ahk_id " hwnd
+        WinSetAlwaysOnTop false, "ahk_id " hwnd
+    }
 }
 
-ProcessExistRaw(name) {
+ProcessExists(name) {
     try {
-        for proc in ComObjGet("winmgmts:").ExecQuery("Select * from Win32_Process where Name='" name "'")
+        for proc in ComObjGet("winmgmts:").ExecQuery(
+            "SELECT * FROM Win32_Process WHERE Name='" name "'"
+        )
             return true
     } catch {
         return false
@@ -32,8 +74,9 @@ ProcessExistRaw(name) {
     return false
 }
 
-A_PathSplit(path) {
-    ; Returns a map with Dir, File, Ext
-    SplitPath path, &name, &dir, &ext, &nameNoExt, &drive
-    return {Dir: dir, File: name, Ext: ext}
+Log(message) {
+    global config
+
+    timestamp := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
+    FileAppend "[" timestamp "] " message "`n", config.logFile
 }
